@@ -832,3 +832,63 @@ button.link.danger {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Order status + payment pills ---- */
+.pill.pending,
+.pill.pay-requires_payment {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.pill.paid,
+.pill.fulfilled,
+.pill.pay-succeeded {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.pill.fulfilled {
+  color: var(--gold);
+}
+.pill.cancelled,
+.pill.pay-failed {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+/* ---- Order detail drawer ---- */
+.order-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.detail-h {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.detail-block > div {
+  line-height: 1.5;
+}
+.table.compact td {
+  padding: 7px 8px;
+}
+.table td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+.table .strong {
+  font-weight: 600;
+  color: var(--ink);
+}

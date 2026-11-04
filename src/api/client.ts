@@ -230,7 +230,45 @@ export const api = {
       return request<{ ok: boolean }>(`/api/v1/admin/products/${id}`, { method: 'DELETE' });
     },
   },
+
+  orders: {
+    list(
+      params: { status?: OrderStatus; cursor?: string; limit?: number } = {},
+    ): Promise<Page<AdminOrder>> {
+      return request<Page<AdminOrder>>(`/api/v1/admin/orders${toQuery(params)}`);
+    },
+    get(id: string): Promise<AdminOrder> {
+      return request<AdminOrder>(`/api/v1/admin/orders/${id}`);
+    },
+    setStatus(id: string, status: OrderStatus): Promise<AdminOrder> {
+      return request<AdminOrder>(`/api/v1/admin/orders/${id}/status`, {
+        method: 'PATCH',
+        body: { status },
+      });
+    },
+    payments(id: string): Promise<AdminPayment[]> {
+      return request<AdminPayment[]>(`/api/v1/admin/orders/${id}/payments`);
+    },
+  },
+
+  payments: {
+    create(orderId: string): Promise<AdminPayment> {
+      return request<AdminPayment>(`/api/v1/orders/${orderId}/payment`, { method: 'POST' });
+    },
+    confirm(id: string): Promise<AdminPayment> {
+      return request<AdminPayment>(`/api/v1/admin/payments/${id}/confirm`, { method: 'POST' });
+    },
+  },
 };
+
+/** Serialise a params object to a query string, skipping empty values. */
+function toQuery(params: Record<string, string | number | undefined>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  }
+  return qs.toString() ? `?${qs.toString()}` : '';
+}
 
 // --- Catalog types (mirror the API admin projections) ---
 export interface Money {
@@ -291,4 +329,57 @@ export interface ProductInput {
 export interface Page<T> {
   items: T[];
   nextCursor: string | null;
+}
+
+// --- Order types (mirror the API admin projection) ---
+export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled';
+export interface OrderCustomer {
+  email: string;
+  name: string;
+  phone: string | null;
+}
+export interface ShippingAddress {
+  line1: string;
+  line2: string | null;
+  city: string;
+  region: string | null;
+  postalCode: string;
+  country: string;
+}
+export interface OrderItem {
+  productId: string;
+  slug: string;
+  name: string;
+  unitPrice: Money;
+  quantity: number;
+  lineTotal: Money;
+}
+export interface AdminOrder {
+  id: string;
+  orderNumber: string;
+  userId: string | null;
+  status: OrderStatus;
+  currency: string;
+  customer: OrderCustomer;
+  shippingAddress: ShippingAddress;
+  items: OrderItem[];
+  subtotal: Money;
+  total: Money;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Payment types (mirror the API admin projection) ---
+export type PaymentStatus = 'requires_payment' | 'succeeded' | 'failed';
+export interface AdminPayment {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  status: PaymentStatus;
+  provider: string;
+  amount: Money;
+  providerRef: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

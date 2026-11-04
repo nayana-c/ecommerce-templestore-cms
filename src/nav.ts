@@ -39,7 +39,7 @@ export const NAV: NavGroup[] = [
   {
     title: 'Sales',
     items: [
-      { label: 'Orders', path: '/orders', icon: 'cart', phase: 3 },
+      { label: 'Orders', path: '/orders', icon: 'cart', phase: 3, ready: true },
       { label: 'Customers', path: '/customers', icon: 'users', phase: 4 },
     ],
   },

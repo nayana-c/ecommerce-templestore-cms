@@ -5,12 +5,13 @@ import { NAV } from './nav.js';
 import { Categories } from './pages/Categories.js';
 import { Dashboard } from './pages/Dashboard.js';
 import { Login } from './pages/Login.js';
+import { Orders } from './pages/Orders.js';
 import { Placeholder } from './pages/Placeholder.js';
 import { Products } from './pages/Products.js';
 import { UsersPage } from './pages/Users.js';
 
 // Paths that have a dedicated page; everything else routes to a placeholder.
-const REAL_PATHS = new Set(['/', '/users', '/products', '/categories']);
+const REAL_PATHS = new Set(['/', '/users', '/products', '/categories', '/orders']);
 const PLACEHOLDER_PATHS = NAV.flatMap((g) => g.items)
   .map((i) => i.path)
   .filter((p) => !REAL_PATHS.has(p));
@@ -40,6 +41,7 @@ export function App(): JSX.Element {
         <Route index element={<Dashboard />} />
         <Route path="products" element={<Products />} />
         <Route path="categories" element={<Categories />} />
+        <Route path="orders" element={<Orders />} />
         <Route path="users" element={<UsersPage />} />
         {PLACEHOLDER_PATHS.map((p) => (
           <Route key={p} path={p.replace(/^\//, '')} element={<Placeholder />} />
