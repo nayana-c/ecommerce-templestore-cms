@@ -7,6 +7,8 @@ import {
   type ProductInput,
 } from '../api/client.js';
 import { Icon } from '../components/Icon.js';
+import { Drawer } from '../components/Drawer.js';
+import { CheckboxGroup, Select, TextArea, TextField } from '../components/form/index.js';
 import { formatMoney, slugify, toMajor, toMinor } from '../format.js';
 
 interface FormState {
@@ -142,19 +144,8 @@ export function Products(): JSX.Element {
     setDrawerOpen(true);
   }
   function closeDrawer(): void {
-    if (saving) return;
     setDrawerOpen(false);
   }
-
-  // Close the drawer on Escape.
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') closeDrawer();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [drawerOpen, saving]);
 
   function toggleCategory(id: string): void {
     setForm((f) => ({
@@ -351,161 +342,118 @@ export function Products(): JSX.Element {
       </section>
 
       {/* Slide-in create/edit drawer */}
-      <div className={`drawer-root${drawerOpen ? ' open' : ''}`} aria-hidden={!drawerOpen}>
-        <div className="drawer-scrim" onClick={closeDrawer} />
-        <aside
-          className="drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-label={form.id ? 'Edit product' : 'New product'}
-        >
-          <div className="drawer-head">
-            <h2>{form.id ? 'Edit product' : 'New product'}</h2>
-            <button type="button" className="icon-btn" onClick={closeDrawer} aria-label="Close">
-              ✕
+      <Drawer
+        open={drawerOpen}
+        title={form.id ? 'Edit product' : 'New product'}
+        onClose={closeDrawer}
+        closeDisabled={saving}
+      >
+        <form className="form-grid drawer-body" onSubmit={(e) => void onSubmit(e)}>
+          {formError && <div className="error banner">{formError}</div>}
+          <TextField
+            label="Name"
+            required
+            value={form.name}
+            onValueChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                name: v,
+                slug: f.slugEdited ? f.slug : slugify(v),
+              }))
+            }
+          />
+          <TextField
+            label="Slug"
+            required
+            value={form.slug}
+            onValueChange={(v) => setForm((f) => ({ ...f, slug: v, slugEdited: true }))}
+          />
+          <TextArea
+            label="Description"
+            value={form.description}
+            onValueChange={(v) => setForm((f) => ({ ...f, description: v }))}
+          />
+          <div className="row2">
+            <TextField
+              label="Price (major units)"
+              type="number"
+              step="0.01"
+              min="0"
+              required
+              value={form.price}
+              onValueChange={(v) => setForm((f) => ({ ...f, price: v }))}
+            />
+            <TextField
+              label="Compare-at (optional)"
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.compareAtPrice}
+              onValueChange={(v) => setForm((f) => ({ ...f, compareAtPrice: v }))}
+            />
+          </div>
+          <div className="row2">
+            <TextField
+              label="Stock"
+              type="number"
+              min="0"
+              hint="Blank = untracked"
+              value={form.stockQuantity}
+              onValueChange={(v) => setForm((f) => ({ ...f, stockQuantity: v }))}
+            />
+            <TextField
+              label="SKU (optional)"
+              value={form.sku}
+              onValueChange={(v) => setForm((f) => ({ ...f, sku: v }))}
+            />
+          </div>
+          <div className="row2">
+            <Select
+              label="Status"
+              value={form.status}
+              onValueChange={(v) => setForm((f) => ({ ...f, status: v as FormState['status'] }))}
+              options={[
+                { value: 'draft', label: 'draft' },
+                { value: 'active', label: 'active' },
+                { value: 'archived', label: 'archived' },
+              ]}
+            />
+            <Select
+              label="Type"
+              value={form.productType}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, productType: v as FormState['productType'] }))
+              }
+              options={[
+                { value: 'physical', label: 'physical' },
+                { value: 'service', label: 'service' },
+              ]}
+            />
+          </div>
+          <CheckboxGroup
+            legend="Categories"
+            emptyText="No categories yet — create some first."
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            value={form.categoryIds}
+            onToggle={toggleCategory}
+          />
+          <TextArea
+            label="Image URLs"
+            rows={2}
+            hint="One per line"
+            value={form.images}
+            onValueChange={(v) => setForm((f) => ({ ...f, images: v }))}
+          />
+          <div className="drawer-actions">
+            <button type="button" className="secondary" onClick={closeDrawer} disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : form.id ? 'Save changes' : 'Create product'}
             </button>
           </div>
-          <form className="form-grid drawer-body" onSubmit={(e) => void onSubmit(e)}>
-            {formError && <div className="error banner">{formError}</div>}
-            <label>
-              Name
-              <input
-                value={form.name}
-                required
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    name: e.target.value,
-                    slug: f.slugEdited ? f.slug : slugify(e.target.value),
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Slug
-              <input
-                value={form.slug}
-                required
-                onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value, slugEdited: true }))}
-              />
-            </label>
-            <label>
-              Description
-              <textarea
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              />
-            </label>
-            <div className="row2">
-              <label>
-                Price (major units)
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.price}
-                  required
-                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                />
-              </label>
-              <label>
-                Compare-at (optional)
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.compareAtPrice}
-                  onChange={(e) => setForm((f) => ({ ...f, compareAtPrice: e.target.value }))}
-                />
-              </label>
-            </div>
-            <div className="row2">
-              <label>
-                Stock (blank = untracked)
-                <input
-                  type="number"
-                  min="0"
-                  value={form.stockQuantity}
-                  onChange={(e) => setForm((f) => ({ ...f, stockQuantity: e.target.value }))}
-                />
-              </label>
-              <label>
-                SKU (optional)
-                <input
-                  value={form.sku}
-                  onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-                />
-              </label>
-            </div>
-            <div className="row2">
-              <label>
-                Status
-                <select
-                  value={form.status}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, status: e.target.value as FormState['status'] }))
-                  }
-                >
-                  <option value="draft">draft</option>
-                  <option value="active">active</option>
-                  <option value="archived">archived</option>
-                </select>
-              </label>
-              <label>
-                Type
-                <select
-                  value={form.productType}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      productType: e.target.value as FormState['productType'],
-                    }))
-                  }
-                >
-                  <option value="physical">physical</option>
-                  <option value="service">service</option>
-                </select>
-              </label>
-            </div>
-            <fieldset className="catset">
-              <legend>Categories</legend>
-              {categories.length === 0 ? (
-                <span className="muted">No categories yet — create some first.</span>
-              ) : (
-                <div className="checks">
-                  {categories.map((c) => (
-                    <label key={c.id} className="check">
-                      <input
-                        type="checkbox"
-                        checked={form.categoryIds.includes(c.id)}
-                        onChange={() => toggleCategory(c.id)}
-                      />
-                      {c.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </fieldset>
-            <label>
-              Image URLs (one per line)
-              <textarea
-                rows={2}
-                value={form.images}
-                onChange={(e) => setForm((f) => ({ ...f, images: e.target.value }))}
-              />
-            </label>
-            <div className="drawer-actions">
-              <button type="button" className="secondary" onClick={closeDrawer} disabled={saving}>
-                Cancel
-              </button>
-              <button type="submit" disabled={saving}>
-                {saving ? 'Saving…' : form.id ? 'Save changes' : 'Create product'}
-              </button>
-            </div>
-          </form>
-        </aside>
-      </div>
+        </form>
+      </Drawer>
     </div>
   );
 }

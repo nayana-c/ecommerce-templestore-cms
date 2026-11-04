@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ApiError, api, type AdminCategory, type CategoryInput } from '../api/client.js';
 import { Icon } from '../components/Icon.js';
+import { Drawer } from '../components/Drawer.js';
+import { Select, TextArea, TextField } from '../components/form/index.js';
 import { slugify } from '../format.js';
 
 interface FormState {
@@ -11,7 +13,7 @@ interface FormState {
   description: string;
   parentId: string;
   status: 'active' | 'hidden';
-  sortOrder: number;
+  sortOrder: string;
 }
 
 const emptyForm: FormState = {
@@ -22,13 +24,16 @@ const emptyForm: FormState = {
   description: '',
   parentId: '',
   status: 'active',
-  sortOrder: 0,
+  sortOrder: '0',
 };
 
 export function Categories(): JSX.Element {
   const [list, setList] = useState<AdminCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Drawer-hosted create/edit form (mirrors the Products page).
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -48,11 +53,12 @@ export function Categories(): JSX.Element {
   }
   useEffect(() => void load(), []);
 
-  function startCreate(): void {
+  function openCreate(): void {
     setForm(emptyForm);
     setFormError(null);
+    setDrawerOpen(true);
   }
-  function startEdit(cat: AdminCategory): void {
+  function openEdit(cat: AdminCategory): void {
     setForm({
       id: cat.id,
       name: cat.name,
@@ -61,9 +67,13 @@ export function Categories(): JSX.Element {
       description: cat.description ?? '',
       parentId: cat.parentId ?? '',
       status: cat.status,
-      sortOrder: cat.sortOrder,
+      sortOrder: String(cat.sortOrder),
     });
     setFormError(null);
+    setDrawerOpen(true);
+  }
+  function closeDrawer(): void {
+    setDrawerOpen(false);
   }
 
   async function onSubmit(e: FormEvent): Promise<void> {
@@ -76,12 +86,13 @@ export function Categories(): JSX.Element {
       description: form.description || undefined,
       parentId: form.parentId || null,
       status: form.status,
-      sortOrder: form.sortOrder,
+      sortOrder: Number(form.sortOrder) || 0,
     };
     try {
       if (form.id) await api.categories.update(form.id, input);
       else await api.categories.create(input);
       setForm(emptyForm);
+      setDrawerOpen(false);
       await load();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Save failed.');
@@ -94,103 +105,31 @@ export function Categories(): JSX.Element {
     if (!confirm(`Delete category "${cat.name}"?`)) return;
     try {
       await api.categories.remove(cat.id);
-      if (form.id === cat.id) setForm(emptyForm);
+      if (form.id === cat.id) {
+        setForm(emptyForm);
+        setDrawerOpen(false);
+      }
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Delete failed.');
     }
   }
 
+  // Parent options exclude the category being edited (no self-parenting).
+  const parentOptions = list
+    .filter((c) => c.id !== form.id)
+    .map((c) => ({ value: c.id, label: c.name }));
+
   return (
     <div className="page">
       <div className="page-head">
         <Icon name="tag" size={22} />
         <h1>Categories</h1>
+        <div className="spacer" />
+        <button type="button" onClick={openCreate}>
+          <span className="btn-plus">＋</span> New category
+        </button>
       </div>
-
-      <form className="card form-grid" onSubmit={(e) => void onSubmit(e)}>
-        <h2>{form.id ? 'Edit category' : 'New category'}</h2>
-        {formError && <div className="error banner">{formError}</div>}
-        <div className="row2">
-          <label>
-            Name
-            <input
-              value={form.name}
-              required
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  name: e.target.value,
-                  slug: f.slugEdited ? f.slug : slugify(e.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            Slug
-            <input
-              value={form.slug}
-              required
-              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value, slugEdited: true }))}
-            />
-          </label>
-        </div>
-        <label>
-          Description
-          <input
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          />
-        </label>
-        <div className="row3">
-          <label>
-            Parent
-            <select
-              value={form.parentId}
-              onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-            >
-              <option value="">— none —</option>
-              {list
-                .filter((c) => c.id !== form.id)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select
-              value={form.status}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, status: e.target.value as 'active' | 'hidden' }))
-              }
-            >
-              <option value="active">active</option>
-              <option value="hidden">hidden</option>
-            </select>
-          </label>
-          <label>
-            Sort order
-            <input
-              type="number"
-              value={form.sortOrder}
-              onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
-            />
-          </label>
-        </div>
-        <div className="form-actions">
-          <button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : form.id ? 'Save changes' : 'Create category'}
-          </button>
-          {form.id && (
-            <button type="button" className="secondary" onClick={startCreate}>
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
 
       <section className="card">
         <h2>All categories</h2>
@@ -198,7 +137,7 @@ export function Categories(): JSX.Element {
         {loading ? (
           <p className="muted">Loading…</p>
         ) : list.length === 0 ? (
-          <p className="muted">No categories yet. Create one above.</p>
+          <p className="muted">No categories yet. Create one with “＋ New category”.</p>
         ) : (
           <table className="table">
             <thead>
@@ -222,7 +161,7 @@ export function Categories(): JSX.Element {
                   </td>
                   <td>{c.sortOrder}</td>
                   <td className="row-actions">
-                    <button className="link" onClick={() => startEdit(c)}>
+                    <button className="link" onClick={() => openEdit(c)}>
                       Edit
                     </button>
                     <button className="link danger" onClick={() => void onDelete(c)}>
@@ -235,6 +174,74 @@ export function Categories(): JSX.Element {
           </table>
         )}
       </section>
+
+      {/* Slide-in create/edit drawer */}
+      <Drawer
+        open={drawerOpen}
+        title={form.id ? 'Edit category' : 'New category'}
+        onClose={closeDrawer}
+        closeDisabled={saving}
+      >
+        <form className="form-grid drawer-body" onSubmit={(e) => void onSubmit(e)}>
+          {formError && <div className="error banner">{formError}</div>}
+          <TextField
+            label="Name"
+            required
+            value={form.name}
+            onValueChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                name: v,
+                slug: f.slugEdited ? f.slug : slugify(v),
+              }))
+            }
+          />
+          <TextField
+            label="Slug"
+            required
+            value={form.slug}
+            onValueChange={(v) => setForm((f) => ({ ...f, slug: v, slugEdited: true }))}
+          />
+          <TextArea
+            label="Description"
+            rows={2}
+            value={form.description}
+            onValueChange={(v) => setForm((f) => ({ ...f, description: v }))}
+          />
+          <div className="row2">
+            <Select
+              label="Parent"
+              value={form.parentId}
+              placeholder="— none —"
+              options={parentOptions}
+              onValueChange={(v) => setForm((f) => ({ ...f, parentId: v }))}
+            />
+            <Select
+              label="Status"
+              value={form.status}
+              onValueChange={(v) => setForm((f) => ({ ...f, status: v as 'active' | 'hidden' }))}
+              options={[
+                { value: 'active', label: 'active' },
+                { value: 'hidden', label: 'hidden' },
+              ]}
+            />
+          </div>
+          <TextField
+            label="Sort order"
+            type="number"
+            value={form.sortOrder}
+            onValueChange={(v) => setForm((f) => ({ ...f, sortOrder: v }))}
+          />
+          <div className="drawer-actions">
+            <button type="button" className="secondary" onClick={closeDrawer} disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : form.id ? 'Save changes' : 'Create category'}
+            </button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }

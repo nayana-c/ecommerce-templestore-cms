@@ -482,6 +482,34 @@ button:disabled {
   place-items: center;
 }
 
+/* ---- Reusable form fields (components/form) ---- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field-req {
+  color: var(--accent-2);
+}
+.field-hint {
+  font-size: 0.76rem;
+  color: var(--faint);
+}
+.field-error {
+  font-size: 0.76rem;
+  color: var(--error);
+}
+.field [aria-invalid='true'] {
+  border-color: var(--error);
+}
+
 /* ---- Catalog CRUD ---- */
 .form-grid {
   display: flex;
